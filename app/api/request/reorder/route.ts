@@ -1,24 +1,25 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-export async function PUT(req: Request) {
+export async function POST(req: Request) {
+  const { roomCode, order }: { roomCode: string; order: string[] } =
+    await req.json();
+
   try {
-    const body = await req.json();
-    const { roomCode, requests } = body || {}; // requests = [{ id, order }, ...]
-
-    if (!roomCode || !Array.isArray(requests)) {
-      return NextResponse.json({ error: "Invalid body" }, { status: 400 });
-    }
-
-    const room = await prisma.room.findUnique({ where: { code: roomCode } });
-    if (!room) return NextResponse.json({ error: "Room not found" }, { status: 404 });
-
     await prisma.$transaction(
-      requests.map((r: any) => prisma.request.update({ where: { id: r.id }, data: { order: r.order } }))
+      order.map((id, index) =>
+        prisma.request.update({
+          where: { id },
+          data: { order: index },
+        })
+      )
     );
     return NextResponse.json({ success: true });
-  } catch (e) {
-    console.error("PUT /api/request/reorder error:", e);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Failed to reorder requests" },
+      { status: 500 }
+    );
   }
 }

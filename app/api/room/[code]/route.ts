@@ -10,7 +10,7 @@ export async function GET(
   const room = await prisma.room.findUnique({
     where: { code },
     include: {
-      requests: { orderBy: [{ votes: "desc" }, { createdAt: "asc" }] },
+      requests: { orderBy: [{ createdAt: "asc" }] },
     },
   });
 
