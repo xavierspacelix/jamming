@@ -21,6 +21,9 @@ export default function Player({
   const [queue, setQueue] = useState<RequestItem[]>([]);
   const [current, setCurrent] = useState<RequestItem | null>(null);
   const playerRef = useRef<any>(null);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   const loadQueue = async () => {
     try {
@@ -57,6 +60,23 @@ export default function Player({
     return () => es.close();
   }, [code]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (playerRef.current) {
+        setCurrentTime(playerRef.current.getCurrentTime());
+        setDuration(playerRef.current.getDuration());
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (playerRef.current && current) {
+      playerRef.current.loadVideoById(current.videoId);
+      playerRef.current.playVideo();
+    }
+  }, [current]);
+
   const onEnd = async () => {
     if (!current) return;
 
@@ -74,6 +94,28 @@ export default function Player({
   const onReady: YouTubeProps["onReady"] = (event) => {
     playerRef.current = event.target;
     playerRef.current.playVideo();
+  };
+  const onStateChange: YouTubeProps["onStateChange"] = (event) => {
+    switch (event.data) {
+      case 1:
+        setIsPlaying(true);
+        break;
+      case 2:
+        setIsPlaying(false);
+        break;
+      case 0:
+        onEnd();
+        break;
+    }
+  };
+  const togglePlayPause = () => {
+    if (!playerRef.current) return;
+    const state = playerRef.current.getPlayerState();
+    if (state === 1) {
+      playerRef.current.pauseVideo();
+    } else {
+      playerRef.current.playVideo();
+    }
   };
   if (!current) {
     return (
@@ -116,7 +158,7 @@ export default function Player({
               height: "100%",
               playerVars: {
                 autoplay: 1,
-                controls: 1,
+                controls: 0,
                 modestbranding: 1,
                 rel: 0,
                 showinfo: 0,
@@ -124,6 +166,7 @@ export default function Player({
             }}
             onEnd={onEnd}
             onReady={onReady}
+            onStateChange={onStateChange}
             className="w-full h-full"
           />
         </div>
@@ -151,6 +194,25 @@ export default function Player({
                   Now Playing
                 </span>
               </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-gray-600 dark:text-gray-300">
+              {new Date(currentTime * 1000).toISOString().slice(14, 19)} / {new Date(duration * 1000).toISOString().slice(14, 19)}
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={togglePlayPause}
+                className="p-2 rounded-full bg-blue-500 text-white"
+              >
+                {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+              </button>
+              <button
+                onClick={skipToNext}
+                className="p-2 rounded-full bg-blue-500 text-white"
+              >
+                <SkipForward className="w-6 h-6" />
+              </button>
             </div>
           </div>
         </div>
