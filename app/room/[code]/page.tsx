@@ -3,10 +3,33 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ColumnDef } from "@tanstack/react-table";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { Toaster } from "@/components/ui/sonner"; // optional
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { SortableItem } from "@/components/SortableItem";
+import { ColumnDef, useReactTable } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table";
 import Link from "next/link";
-import { ArrowRightToLineIcon } from "lucide-react";
+import { ArrowBigLeft, ArrowRightToLineIcon } from "lucide-react";
 
 type Video = {
   videoId: string;
@@ -35,6 +58,7 @@ export default function SearchPage({
   const [queue, setQueue] = useState<RequestRow[]>([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const sensors = useSensors(useSensor(PointerSensor));
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const loadQueue = useCallback(async () => {
@@ -45,17 +69,7 @@ export default function SearchPage({
 
   useEffect(() => {
     loadQueue();
-    const es = new EventSource(`/api/socket?room=${code}`);
-    es.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        if (data.queue) setQueue(data.queue);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    return () => es.close();
-  }, [loadQueue, code]);
+  }, [loadQueue]);
 
   const handleSearch = async () => {
     if (!q.trim()) return;
@@ -89,6 +103,7 @@ export default function SearchPage({
         }),
       });
       if (!res.ok) throw new Error(await res.text());
+      await loadQueue();
       // toast success
     } catch (e) {
       console.error("Add video error:", e);
@@ -102,6 +117,7 @@ export default function SearchPage({
     try {
       const res = await fetch(`/api/request/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(await res.text());
+      await loadQueue();
     } catch (e) {
       console.error(e);
     } finally {
@@ -120,29 +136,26 @@ export default function SearchPage({
       console.error("Failed to update order:", err);
     }
   };
-
   const nowPlaying = queue[0];
   const upcoming = queue.slice(1);
 
   const moveUp = (index: number) => {
-    const actualIndex = index + 1;
-    if (actualIndex <= 1) return;
+    if (index === 0) return;
     const newQueue = [...queue];
-    [newQueue[actualIndex - 1], newQueue[actualIndex]] = [
-      newQueue[actualIndex],
-      newQueue[actualIndex - 1],
+    [newQueue[index - 1], newQueue[index]] = [
+      newQueue[index],
+      newQueue[index - 1],
     ];
     setQueue(newQueue);
     updateOrder(newQueue);
   };
 
   const moveDown = (index: number) => {
-    const actualIndex = index + 1;
-    if (actualIndex >= queue.length - 1) return;
+    if (index === queue.length - 1) return;
     const newQueue = [...queue];
-    [newQueue[actualIndex], newQueue[actualIndex + 1]] = [
-      newQueue[actualIndex + 1],
-      newQueue[actualIndex],
+    [newQueue[index], newQueue[index + 1]] = [
+      newQueue[index + 1],
+      newQueue[index],
     ];
     setQueue(newQueue);
     updateOrder(newQueue);
@@ -183,7 +196,7 @@ export default function SearchPage({
           <Button
             size="sm"
             onClick={() => moveDown(row.index)}
-            disabled={row.index === upcoming.length - 1}
+            disabled={row.index === queue.length - 1}
           >
             ↓
           </Button>
@@ -272,7 +285,6 @@ export default function SearchPage({
           </>
         ))}
       </div>
-
       {nowPlaying && (
         <div>
           <h2 className="text-lg font-semibold mb-2">Now Playing</h2>
@@ -284,15 +296,16 @@ export default function SearchPage({
             />
             <div>
               <p className="font-medium">{nowPlaying.title}</p>
-              <p className="text-sm text-muted-foreground">{nowPlaying.channel}</p>
+              <p className="text-sm text-muted-foreground">
+                {nowPlaying.channel}
+              </p>
             </div>
           </div>
         </div>
       )}
-
       <div>
         <h2 className="text-lg font-semibold mb-2">Queue</h2>
-        <DataTable columns={columns} data={upcoming} />
+        <DataTable columns={columns} data={queue} />
       </div>
     </div>
   );

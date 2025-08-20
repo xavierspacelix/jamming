@@ -66,7 +66,6 @@ export default function Player({
     } catch (err) {
       console.error("Failed to delete:", err);
     }
-
   };
 
   const skipToNext = () => {
@@ -140,7 +139,7 @@ export default function Player({
         </div>
 
         {/* Player info and controls */}
-        <div className="p-2">
+        <div className="py-4 px-6">
           {/* Track info */}
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             <img
@@ -163,28 +162,6 @@ export default function Player({
                 </span>
               </div>
             </div>
-          </div>
-
-          {/* Controls */}
-          <div className="flex items-center gap-4 mt-4">
-            <Button
-              size="icon"
-              variant="secondary"
-              onClick={togglePause}
-            >
-              {isPaused ? (
-                <Play className="w-4 h-4" />
-              ) : (
-                <Pause className="w-4 h-4" />
-              )}
-            </Button>
-            <Button
-              size="icon"
-              variant="secondary"
-              onClick={skipToNext}
-            >
-              <SkipForward className="w-4 h-4" />
-            </Button>
           </div>
         </div>
       </div>
