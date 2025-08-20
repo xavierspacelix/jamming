@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { broadcast } from "@/lib/queueEvents";
 
 export async function POST(req: Request) {
   const { roomCode, order }: { roomCode: string; order: string[] } =
@@ -14,6 +15,16 @@ export async function POST(req: Request) {
         })
       )
     );
+
+    const room = await prisma.room.findUnique({ where: { code: roomCode } });
+    if (room) {
+      const queue = await prisma.request.findMany({
+        where: { roomId: room.id },
+        orderBy: { order: "asc" },
+      });
+      broadcast(roomCode, { queue });
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error(error);

@@ -69,7 +69,17 @@ export default function SearchPage({
 
   useEffect(() => {
     loadQueue();
-  }, [loadQueue]);
+    const es = new EventSource(`/api/socket?room=${code}`);
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.queue) setQueue(data.queue);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    return () => es.close();
+  }, [loadQueue, code]);
 
   const handleSearch = async () => {
     if (!q.trim()) return;
@@ -103,7 +113,6 @@ export default function SearchPage({
         }),
       });
       if (!res.ok) throw new Error(await res.text());
-      await loadQueue();
       // toast success
     } catch (e) {
       console.error("Add video error:", e);
@@ -117,7 +126,6 @@ export default function SearchPage({
     try {
       const res = await fetch(`/api/request/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(await res.text());
-      await loadQueue();
     } catch (e) {
       console.error(e);
     } finally {

@@ -30,7 +30,11 @@ export default function Player({
       if (!res.ok) throw new Error(await res.text());
       const data: RequestItem[] = await res.json();
       setQueue(data);
-      if (!current && data.length > 0) setCurrent(data[0]);
+      if (data.length > 0) {
+        setCurrent(data[0]);
+      } else {
+        setCurrent(null);
+      }
     } catch (err) {
       console.error("Failed to load queue:", err);
     }
@@ -38,9 +42,20 @@ export default function Player({
 
   useEffect(() => {
     loadQueue();
-    const interval = setInterval(loadQueue, 3000);
-    return () => clearInterval(interval);
-  }, []);
+    const es = new EventSource(`/api/socket?room=${code}`);
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.queue) {
+          setQueue(data.queue);
+          setCurrent(data.queue[0] || null);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    return () => es.close();
+  }, [code]);
 
   const onEnd = async () => {
     if (!current) return;
@@ -51,9 +66,6 @@ export default function Player({
       console.error("Failed to delete:", err);
     }
 
-    const idx = queue.findIndex((q) => q.id === current.id);
-    const next = queue[idx + 1];
-    setCurrent(next || null);
   };
 
   const skipToNext = () => {
