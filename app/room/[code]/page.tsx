@@ -3,33 +3,10 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  DndContext,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { Toaster } from "@/components/ui/sonner"; // optional
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { SortableItem } from "@/components/SortableItem";
-import { ColumnDef, useReactTable } from "@tanstack/react-table";
+import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table";
 import Link from "next/link";
-import { ArrowBigLeft, ArrowRightToLineIcon } from "lucide-react";
+import { ArrowRightToLineIcon } from "lucide-react";
 
 type Video = {
   videoId: string;
@@ -58,7 +35,6 @@ export default function SearchPage({
   const [queue, setQueue] = useState<RequestRow[]>([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const sensors = useSensors(useSensor(PointerSensor));
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const loadQueue = useCallback(async () => {
@@ -145,23 +121,28 @@ export default function SearchPage({
     }
   };
 
+  const nowPlaying = queue[0];
+  const upcoming = queue.slice(1);
+
   const moveUp = (index: number) => {
-    if (index === 0) return;
+    const actualIndex = index + 1;
+    if (actualIndex <= 1) return;
     const newQueue = [...queue];
-    [newQueue[index - 1], newQueue[index]] = [
-      newQueue[index],
-      newQueue[index - 1],
+    [newQueue[actualIndex - 1], newQueue[actualIndex]] = [
+      newQueue[actualIndex],
+      newQueue[actualIndex - 1],
     ];
     setQueue(newQueue);
     updateOrder(newQueue);
   };
 
   const moveDown = (index: number) => {
-    if (index === queue.length - 1) return;
+    const actualIndex = index + 1;
+    if (actualIndex >= queue.length - 1) return;
     const newQueue = [...queue];
-    [newQueue[index], newQueue[index + 1]] = [
-      newQueue[index + 1],
-      newQueue[index],
+    [newQueue[actualIndex], newQueue[actualIndex + 1]] = [
+      newQueue[actualIndex + 1],
+      newQueue[actualIndex],
     ];
     setQueue(newQueue);
     updateOrder(newQueue);
@@ -202,7 +183,7 @@ export default function SearchPage({
           <Button
             size="sm"
             onClick={() => moveDown(row.index)}
-            disabled={row.index === queue.length - 1}
+            disabled={row.index === upcoming.length - 1}
           >
             ↓
           </Button>
@@ -292,9 +273,26 @@ export default function SearchPage({
         ))}
       </div>
 
+      {nowPlaying && (
+        <div>
+          <h2 className="text-lg font-semibold mb-2">Now Playing</h2>
+          <div className="flex items-center gap-4 mb-6">
+            <img
+              src={nowPlaying.thumbnail}
+              alt={nowPlaying.title}
+              className="w-24 h-14 rounded object-cover"
+            />
+            <div>
+              <p className="font-medium">{nowPlaying.title}</p>
+              <p className="text-sm text-muted-foreground">{nowPlaying.channel}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div>
         <h2 className="text-lg font-semibold mb-2">Queue</h2>
-        <DataTable columns={columns} data={queue} />
+        <DataTable columns={columns} data={upcoming} />
       </div>
     </div>
   );
