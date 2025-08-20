@@ -1,8 +1,14 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import YouTube, { YouTubeProps } from "react-youtube";
-import { Play, Pause, SkipForward, Volume2 } from "lucide-react";
+import { Volume2 } from "lucide-react";
 
 interface RequestItem {
   id: string;
@@ -57,7 +63,7 @@ export default function Player({
     return () => es.close();
   }, [code]);
 
-  const onEnd = async () => {
+  const onEnd = useCallback(async () => {
     if (!current) return;
 
     try {
@@ -65,16 +71,33 @@ export default function Player({
     } catch (err) {
       console.error("Failed to delete:", err);
     }
-
-  };
+  }, [current]);
 
   const skipToNext = () => {
     onEnd();
   };
-  const onReady: YouTubeProps["onReady"] = (event) => {
+
+  const onReady: YouTubeProps["onReady"] = useCallback((event) => {
     playerRef.current = event.target;
     playerRef.current.playVideo();
-  };
+  }, []);
+
+  const onStateChange: YouTubeProps["onStateChange"] = useCallback(() => {}, []);
+
+  const playerOptions = useMemo(
+    () => ({
+      width: "100%",
+      height: "100%",
+      playerVars: {
+        autoplay: 1,
+        controls: 0,
+        modestbranding: 1,
+        rel: 0,
+        showinfo: 0,
+      },
+    }),
+    []
+  );
   if (!current) {
     return (
       <div className="flex flex-col items-center justify-center h-screen ">
@@ -111,19 +134,10 @@ export default function Player({
         <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
           <YouTube
             videoId={current.videoId}
-            opts={{
-              width: "100%",
-              height: "100%",
-              playerVars: {
-                autoplay: 1,
-                controls: 1,
-                modestbranding: 1,
-                rel: 0,
-                showinfo: 0,
-              },
-            }}
+            opts={playerOptions}
             onEnd={onEnd}
             onReady={onReady}
+            onStateChange={onStateChange}
             className="w-full h-full"
           />
         </div>
