@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,9 +50,9 @@ type RequestRow = {
 export default function SearchPage({
   params,
 }: {
-  params: Promise<{ code: string }>;
+  params: { code: string };
 }) {
-  const { code } = React.use(params);
+  const { code } = params;
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Video[]>([]);
   const [queue, setQueue] = useState<RequestRow[]>([]);
