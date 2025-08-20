@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import YouTube, { YouTubeProps } from "react-youtube";
 import { Play, Pause, SkipForward, Volume2 } from "lucide-react";
 
@@ -71,10 +71,13 @@ export default function Player({
   const skipToNext = () => {
     onEnd();
   };
-  const onReady: YouTubeProps["onReady"] = (event) => {
-    playerRef.current = event.target;
-    playerRef.current.playVideo();
-  };
+  const onReady = useCallback<NonNullable<YouTubeProps["onReady"]>>(
+    (event) => {
+      playerRef.current = event.target;
+      playerRef.current.playVideo();
+    },
+    []
+  );
   if (!current) {
     return (
       <div className="flex flex-col items-center justify-center h-screen ">
