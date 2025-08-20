@@ -114,7 +114,7 @@ export default function SearchPage({
       await fetch(`/api/request/reorder`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, order: newQueue.map((q) => q.id) }),
+        body: JSON.stringify({ roomCode: code, order: newQueue.map((q) => q.id) }),
       });
     } catch (err) {
       console.error("Failed to update order:", err);
