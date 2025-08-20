@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { broadcast } from "@/lib/queueEvents";
 
 // GET /api/request?room=CODE
 export async function GET(req: Request) {
@@ -57,6 +58,12 @@ export async function POST(req: Request) {
         roomId: room.id,
       },
     });
+
+    const queue = await prisma.request.findMany({
+      where: { roomId: room.id },
+      orderBy: { order: "asc" },
+    });
+    broadcast(roomCode, { queue });
 
     return NextResponse.json(created);
   } catch (e) {
