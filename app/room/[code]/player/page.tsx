@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import YouTube, { YouTubeProps } from "react-youtube";
 import { Play, Pause, SkipForward, Volume2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface RequestItem {
   id: string;
@@ -18,9 +19,9 @@ export default function Player({
   params: Promise<{ code: string }>;
 }) {
   const { code } = React.use(params);
-  const [queue, setQueue] = useState<RequestItem[]>([]);
   const [current, setCurrent] = useState<RequestItem | null>(null);
   const playerRef = useRef<any>(null);
+  const [isPaused, setIsPaused] = useState(false);
 
   const loadQueue = async () => {
     try {
@@ -29,9 +30,9 @@ export default function Player({
       });
       if (!res.ok) throw new Error(await res.text());
       const data: RequestItem[] = await res.json();
-      setQueue(data);
       if (data.length > 0) {
         setCurrent(data[0]);
+        setIsPaused(false);
       } else {
         setCurrent(null);
       }
@@ -47,8 +48,8 @@ export default function Player({
       try {
         const data = JSON.parse(e.data);
         if (data.queue) {
-          setQueue(data.queue);
           setCurrent(data.queue[0] || null);
+          setIsPaused(false);
         }
       } catch (err) {
         console.error(err);
@@ -71,9 +72,19 @@ export default function Player({
   const skipToNext = () => {
     onEnd();
   };
+  const togglePause = () => {
+    if (!playerRef.current) return;
+    if (isPaused) {
+      playerRef.current.playVideo();
+    } else {
+      playerRef.current.pauseVideo();
+    }
+    setIsPaused(!isPaused);
+  };
   const onReady: YouTubeProps["onReady"] = (event) => {
     playerRef.current = event.target;
     playerRef.current.playVideo();
+    setIsPaused(false);
   };
   if (!current) {
     return (
@@ -152,6 +163,28 @@ export default function Player({
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center gap-4 mt-4">
+            <Button
+              size="icon"
+              variant="secondary"
+              onClick={togglePause}
+            >
+              {isPaused ? (
+                <Play className="w-4 h-4" />
+              ) : (
+                <Pause className="w-4 h-4" />
+              )}
+            </Button>
+            <Button
+              size="icon"
+              variant="secondary"
+              onClick={skipToNext}
+            >
+              <SkipForward className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </div>
