@@ -22,6 +22,8 @@ export default function Player({
   const [current, setCurrent] = useState<RequestItem | null>(null);
   const playerRef = useRef<any>(null);
   const [isPaused, setIsPaused] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   const loadQueue = async () => {
     try {
@@ -58,18 +60,39 @@ export default function Player({
     return () => es.close();
   }, [code]);
 
+  useEffect(() => {
+    if (current && playerRef.current) {
+      playerRef.current.loadVideoById(current.videoId);
+      playerRef.current.playVideo();
+      setIsPaused(false);
+      setCurrentTime(0);
+      setDuration(0);
+    }
+  }, [current]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (playerRef.current) {
+        setCurrentTime(playerRef.current.getCurrentTime());
+        setDuration(playerRef.current.getDuration());
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [current]);
+
   const onEnd = async () => {
     if (!current) return;
 
     try {
       await fetch(`/api/request/${current.id}`, { method: "DELETE" });
+      await loadQueue();
     } catch (err) {
       console.error("Failed to delete:", err);
     }
   };
 
-  const skipToNext = () => {
-    onEnd();
+  const skipToNext = async () => {
+    await onEnd();
   };
   const togglePause = () => {
     if (!playerRef.current) return;
@@ -163,6 +186,41 @@ export default function Player({
               </div>
             </div>
           </div>
+<<<<<<< HEAD
+=======
+          
+          {/* Progress */}
+          <div className="w-full mt-4">
+            <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-500"
+                style={{ width: duration ? `${(currentTime / duration) * 100}%` : "0%" }}
+              />
+            </div>
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center gap-4 mt-4">
+            <Button
+              size="icon"
+              variant="secondary"
+              onClick={togglePause}
+            >
+              {isPaused ? (
+                <Play className="w-4 h-4" />
+              ) : (
+                <Pause className="w-4 h-4" />
+              )}
+            </Button>
+            <Button
+              size="icon"
+              variant="secondary"
+              onClick={skipToNext}
+            >
+              <SkipForward className="w-4 h-4" />
+            </Button>
+          </div>
+>>>>>>> 613d868bf04bc8e76187c51ac88b5dbf73e87b8e
         </div>
       </div>
     </div>
