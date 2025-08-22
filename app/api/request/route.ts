@@ -56,6 +56,7 @@ export async function POST(req: Request) {
         thumbnail: video.thumbnail ?? "",
         order: nextOrder,
         roomId: room.id,
+        requestedBy: video.requestedBy,
       },
     });
 

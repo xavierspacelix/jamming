@@ -6,12 +6,22 @@ export async function GET(req: Request) {
   if (!room) return new Response("room required", { status: 400 });
 
   let controller: ReadableStreamDefaultController;
+  let ping: ReturnType<typeof setInterval>;
   const stream = new ReadableStream({
     start(c) {
       controller = c;
       subscribe(room, c);
+      ping = setInterval(() => {
+        try {
+          c.enqueue("event: ping\n\n");
+        } catch {
+          clearInterval(ping);
+          unsubscribe(room, c);
+        }
+      }, 15000);
     },
     cancel() {
+      clearInterval(ping);
       unsubscribe(room, controller);
     },
   });

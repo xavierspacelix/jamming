@@ -1,19 +1,9 @@
 "use client";
-
-import React, { useEffect, useState, useCallback } from "react";
-import { Input } from "@/components/ui/input";
+import React, { useCallback, useEffect, useState } from "react";
+import { MusicPlayer } from "@/components/music-player";
+import { SongQueue } from "@/components/song-queue";
 import { Button } from "@/components/ui/button";
-import { ColumnDef } from "@tanstack/react-table";
-import { DataTable } from "@/components/data-table";
-import Link from "next/link";
-import { ArrowRightToLineIcon } from "lucide-react";
-
-type Video = {
-  videoId: string;
-  title: string;
-  channel?: string;
-  thumbnail?: string;
-};
+import { getCookie } from "@/lib/utils";
 type RequestRow = {
   id: string;
   videoId: string;
@@ -21,279 +11,150 @@ type RequestRow = {
   channel?: string;
   thumbnail?: string;
   order: number;
+  requestedBy: string;
   createdAt: string;
 };
-
-export default function SearchPage({
+export default function RoomPage({
   params,
 }: {
   params: Promise<{ code: string }>;
 }) {
+  const hostName = getCookie("hostName");
+  const guestName = getCookie("guestName");
   const { code } = React.use(params);
-  const [q, setQ] = useState("");
-  const [results, setResults] = useState<Video[]>([]);
   const [queue, setQueue] = useState<RequestRow[]>([]);
-  const [loadingSearch, setLoadingSearch] = useState(false);
-  const [processing, setProcessing] = useState(false);
-  const [loadingId, setLoadingId] = useState<string | null>(null);
-
+  const [nowPlaying, setNowPlaying] = useState<RequestRow | null>(null);
+  // const [onEnd, setOnEnd] = useState(false);
   const loadQueue = useCallback(async () => {
-    const res = await fetch(`/api/request?room=${code}`);
+    const res = await fetch(`/api/request?room=${code}`, { cache: "no-store" });
     if (!res.ok) return;
-    setQueue(await res.json());
+    const queueData = await res.json();
+    setQueue(queueData);
+    setNowPlaying(queueData[0] ?? null);
   }, [code]);
+  const onEnd = async () => {
+    if (!nowPlaying) return;
 
-  useEffect(() => {
-    loadQueue();
-    const es = new EventSource(`/api/socket?room=${code}`);
-    es.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        if (data.queue) setQueue(data.queue);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    return () => es.close();
-  }, [loadQueue, code]);
-
-  const handleSearch = async () => {
-    if (!q.trim()) return;
-    setLoadingSearch(true);
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}`);
-      const json = await res.json();
-      setResults(json || []);
-    } catch (e) {
-      console.error(e);
-      setResults([]);
-    } finally {
-      setLoadingSearch(false);
-    }
-  };
-
-  const addVideo = async (v: Video) => {
-    setProcessing(true);
-    try {
-      const res = await fetch("/api/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          roomCode: code,
-          video: {
-            id: v.videoId,
-            title: v.title,
-            thumbnail: v.thumbnail,
-            channel: v.channel,
-          },
-        }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      // toast success
-    } catch (e) {
-      console.error("Add video error:", e);
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    setProcessing(true);
-    try {
-      const res = await fetch(`/api/request/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(await res.text());
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const updateOrder = async (newQueue: RequestRow[]) => {
-    try {
-      await fetch(`/api/request/reorder`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, order: newQueue.map((q) => q.id) }),
-      });
+      await fetch(`/api/request/${nowPlaying.id}`, { method: "DELETE" });
+      loadQueue();
     } catch (err) {
-      console.error("Failed to update order:", err);
+      console.error("Failed to delete:", err);
     }
   };
+  useEffect(() => {
+    let es: EventSource | null = null;
+    let retryDelay = 1000;
+    const maxDelay = 16000;
+    let retryTimer: ReturnType<typeof setTimeout>;
 
-  const nowPlaying = queue[0];
-  const upcoming = queue.slice(1);
+    const connect = () => {
+      es = new EventSource(`/api/socket?room=${code}`);
+      es.onopen = () => {
+        retryDelay = 1000;
+        loadQueue();
+      };
+      es.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.queue) setQueue(data.queue);
+        } catch (err) {
+          console.error(err);
+        }
+      };
+      es.onerror = () => {
+        es?.close();
+        retryTimer = setTimeout(connect, retryDelay);
+        retryDelay = Math.min(retryDelay * 2, maxDelay);
+      };
+    };
+    loadQueue();
+    connect();
 
-  const moveUp = (index: number) => {
-    const actualIndex = index + 1;
-    if (actualIndex <= 1) return;
-    const newQueue = [...queue];
-    [newQueue[actualIndex - 1], newQueue[actualIndex]] = [
-      newQueue[actualIndex],
-      newQueue[actualIndex - 1],
-    ];
-    setQueue(newQueue);
-    updateOrder(newQueue);
-  };
-
-  const moveDown = (index: number) => {
-    const actualIndex = index + 1;
-    if (actualIndex >= queue.length - 1) return;
-    const newQueue = [...queue];
-    [newQueue[actualIndex], newQueue[actualIndex + 1]] = [
-      newQueue[actualIndex + 1],
-      newQueue[actualIndex],
-    ];
-    setQueue(newQueue);
-    updateOrder(newQueue);
-  };
-
-  const columns: ColumnDef<RequestRow>[] = [
-    {
-      accessorKey: "thumbnail",
-      header: "Thumbnail",
-      cell: ({ row }) => (
-        <img
-          src={row.original.thumbnail}
-          alt={row.original.title}
-          className="w-16 h-9 object-cover rounded"
-        />
-      ),
-    },
-    {
-      accessorKey: "title",
-      header: "Title",
-    },
-    {
-      accessorKey: "channel",
-      header: "Channel",
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => (
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            onClick={() => moveUp(row.index)}
-            disabled={row.index === 0}
-          >
-            ↑
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => moveDown(row.index)}
-            disabled={row.index === upcoming.length - 1}
-          >
-            ↓
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => handleDelete(row.original.id)}
-            disabled={loadingId === row.original.id}
-          >
-            {loadingId === row.original.id ? "Deleting..." : "Delete"}
-          </Button>
-        </div>
-      ),
-    },
-  ];
+    return () => {
+      es?.close();
+      if (retryTimer) clearTimeout(retryTimer);
+    };
+  }, [loadQueue, code]);
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between">
-        <h2 className="text-lg font-semibold mb-2">Search</h2>
-        <Button asChild variant={"link"}>
-          <Link href={`/room/${code}/player`}>
-            <ArrowRightToLineIcon />
-            Host Player
-          </Link>
-        </Button>
-      </div>
-      <div className="flex gap-2">
-        <Input
-          placeholder="Search YouTube..."
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-        />
-        {results.length > 0 && (
-          <Button variant={"outline"} onClick={() => setResults([])}>
-            Clear
-          </Button>
+    <>
+      <main className="flex-1">
+        <div className="flex flex-1 flex-col gap-4 p-4 mb-2">
+          <div className="bg-muted/50" />
+          <SongQueue
+            setQueue={setQueue}
+            queue={queue}
+            currentVideo={nowPlaying}
+            code={code}
+          />
+        </div>
+      </main>
+      <footer className="border-t bg-background mt-auto w-full">
+        {guestName === hostName && (
+          <MusicPlayer
+            currentVideo={nowPlaying}
+            endOfVideo={(event) => {
+              if (event.data == 0) {
+                onEnd();
+              }
+            }}
+          />
         )}
-        <Button onClick={handleSearch} disabled={loadingSearch}>
-          {loadingSearch ? "Searching..." : "Search"}
-        </Button>
-      </div>
 
-      {/* results */}
-      <div className="divide-y divide-gray-200 dark:divide-gray-700">
-        {results.map((r, index) => (
-          <>
-            <div
-              key={r.videoId}
-              className="flex items-center gap-4 p-3 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition"
-              onClick={() => addVideo(r)}
-            >
-              {/* Index */}
-              <span className="w-6 text-right text-sm font-medium text-gray-500 dark:text-gray-400">
-                {index + 1}
-              </span>
-
-              {/* Thumbnail */}
-              <img
-                src={r.thumbnail}
-                alt={r.title}
-                className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
-              />
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                  {r.title}
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  {r.channel}
-                </p>
+        <div className=" px-1 py-1 w-full">
+          {/* Mobile Layout - Stack Vertically */}
+          <div className="block sm:hidden">
+            <div className="text-center space-y-3">
+              <div className="text-base text-muted-foreground font-medium">
+                © {new Date().getFullYear()} Jamming Space App. All rights
+                reserved.
               </div>
-
-              {/* Add button */}
-              <button
-                className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline"
-                onClick={(e) => {
-                  e.stopPropagation(); // agar klik tombol tidak trigger parent
-                  addVideo(r);
-                }}
-              >
-                Add
-              </button>
-            </div>
-          </>
-        ))}
-      </div>
-
-      {nowPlaying && (
-        <div>
-          <h2 className="text-lg font-semibold mb-2">Now Playing</h2>
-          <div className="flex items-center gap-4 mb-6">
-            <img
-              src={nowPlaying.thumbnail}
-              alt={nowPlaying.title}
-              className="w-24 h-14 rounded object-cover"
-            />
-            <div>
-              <p className="font-medium">{nowPlaying.title}</p>
-              <p className="text-sm text-muted-foreground">{nowPlaying.channel}</p>
+              <p className="text-base text-muted-foreground">
+                Made with ❤️ by
+                <Button
+                  asChild
+                  variant={"link"}
+                  className="h-auto p-1 text-base font-medium"
+                >
+                  <a
+                    href="https://instagram.com/juanakbarr1"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline"
+                  >
+                    Juan Akbar Indrian
+                  </a>
+                </Button>
+              </p>
             </div>
           </div>
-        </div>
-      )}
 
-      <div>
-        <h2 className="text-lg font-semibold mb-2">Queue</h2>
-        <DataTable columns={columns} data={upcoming} />
-      </div>
-    </div>
+          {/* Desktop Layout - Side by Side */}
+          <div className="hidden sm:flex sm:items-center sm:justify-between">
+            <div className="text-base text-muted-foreground font-medium">
+              © {new Date().getFullYear()} Jamming Space App. All rights
+              reserved.
+            </div>
+            <p className="text-base text-muted-foreground">
+              Made with ❤️ by{" "}
+              <Button
+                asChild
+                variant={"link"}
+                className="h-auto p-2 text-base font-medium"
+              >
+                <a
+                  href="https://instagram.com/juanakbarr1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline"
+                >
+                  Juan Akbar Indrian
+                </a>
+              </Button>
+            </p>
+          </div>
+        </div>
+      </footer>
+    </>
   );
 }
