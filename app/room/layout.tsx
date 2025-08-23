@@ -17,7 +17,7 @@ export default function Layout({
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant="floating" />
+      <AppSidebar variant="inset" />
       <SidebarInset>
         <div className="min-h-screen flex flex-col">
           <SiteHeader />

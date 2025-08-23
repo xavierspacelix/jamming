@@ -19,8 +19,6 @@ export default function RoomPage({
 }: {
   params: Promise<{ code: string }>;
 }) {
-  const hostName = getCookie("hostName");
-  const guestName = getCookie("guestName");
   const { code } = React.use(params);
   const [queue, setQueue] = useState<RequestRow[]>([]);
   const [nowPlaying, setNowPlaying] = useState<RequestRow | null>(null);
@@ -90,7 +88,7 @@ export default function RoomPage({
         </div>
       </main>
       <footer className="border-t bg-background mt-auto w-full">
-        {guestName === hostName && (
+        {/* {guestName === hostName && (
           <MusicPlayer
             currentVideo={nowPlaying}
             endOfVideo={(event) => {
@@ -99,7 +97,7 @@ export default function RoomPage({
               }
             }}
           />
-        )}
+        )} */}
 
         <div className=" px-1 py-1 w-full">
           {/* Mobile Layout - Stack Vertically */}
