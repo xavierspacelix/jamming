@@ -1,12 +1,4 @@
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { SidebarInput } from "@/components/ui/sidebar";
 type Video = {
   videoId: string;
   title: string;

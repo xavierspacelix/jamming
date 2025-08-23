@@ -1,5 +1,5 @@
 "use client";
-import { cn, setCookieNonHttpOnly } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DoorOpen } from "lucide-react";
 import { useState } from "react";
+import { setCookieNonHttpOnly } from "@/lib/cookies-client";
 
 export function LoginForm({
   className,

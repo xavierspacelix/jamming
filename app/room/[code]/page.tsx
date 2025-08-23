@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { MusicPlayer } from "@/components/music-player";
 import { SongQueue } from "@/components/song-queue";
 import { Button } from "@/components/ui/button";
-import { getCookie } from "@/lib/utils";
+import { getCookie } from "@/lib/cookies-client";
 type RequestRow = {
   id: string;
   videoId: string;

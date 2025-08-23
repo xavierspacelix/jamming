@@ -4,7 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ModeToggle } from "./theme-toggle";
 import { Github, Link } from "lucide-react";
-import { deleteCookie } from "@/lib/utils";
+import { deleteCookie } from "@/lib/cookies-client";
 
 export function SiteHeader() {
   return (
@@ -30,6 +30,7 @@ export function SiteHeader() {
           </Button>
           <Button variant="outline" size="sm" className=" sm:flex" asChild>
             <a
+              className="cursor-pointer"
               onClick={() => {
                 deleteCookie("roomCode");
                 deleteCookie("guestName");

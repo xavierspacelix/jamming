@@ -9,7 +9,6 @@ export async function ytSearch(q: string, nextPageToken?: string | null) {
   url.searchParams.set("key", YT_KEY);
   if (nextPageToken) url.searchParams.set("pageToken", nextPageToken);
   const res = await fetch(url.toString(), { cache: "no-store" });
-  console.log(res)
   if (!res.ok) return [];
   const json = await res.json();
   return {

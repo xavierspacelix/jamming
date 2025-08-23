@@ -18,8 +18,8 @@ import {
 import { SidebarOptInForm } from "./sidebar-opt-in-form";
 import { Label } from "@radix-ui/react-label";
 import { Search } from "lucide-react";
-import { getCookie } from "@/lib/utils";
 import { useParams } from "next/navigation";
+import { getCookie } from "@/lib/cookies-client";
 
 type Video = {
   videoId: string;
