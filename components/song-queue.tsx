@@ -26,7 +26,12 @@ interface SongQueueProps {
   code: string;
 }
 
-export function SongQueue({ setQueue, queue, currentVideo, code }: SongQueueProps) {
+export function SongQueue({
+  setQueue,
+  queue,
+  currentVideo,
+  code,
+}: SongQueueProps) {
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [dragOverItem, setDragOverItem] = useState<string | null>(null);
 
@@ -119,8 +124,15 @@ export function SongQueue({ setQueue, queue, currentVideo, code }: SongQueueProp
     }
   };
 
-  const removeFromQueue = (trackId: string) => {
+  const removeFromQueue = async (trackId: string) => {
     setQueue((prev) => prev.filter((track) => track.id !== trackId));
+    try {
+      const res = await fetch(`/api/request/${trackId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(await res.text());
+    } catch (e) {
+      console.error(e);
+    } finally {
+    }
   };
 
   return (
@@ -171,14 +183,6 @@ export function SongQueue({ setQueue, queue, currentVideo, code }: SongQueueProp
               </div>
 
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  // onClick={() => onTrackSelect?.(track)}
-                >
-                  <Play className="h-3 w-3" />
-                </Button>
                 <Button
                   variant="ghost"
                   size="icon"

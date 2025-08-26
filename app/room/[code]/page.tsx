@@ -77,8 +77,7 @@ export default function RoomPage({
   return (
     <>
       <main className="flex-1">
-        <div className="flex flex-1 flex-col gap-4 p-4 mb-2">
-          <div className="bg-muted/50" />
+        <div className="flex flex-1 flex-col gap-4 p-4">
           <SongQueue
             setQueue={setQueue}
             queue={queue}
@@ -87,7 +86,7 @@ export default function RoomPage({
           />
         </div>
       </main>
-      <footer className="border-t bg-background mt-auto w-full">
+      <footer className="border-t bg-background mt-auto w-full overflow-hidden rounded-b">
         {/* {guestName === hostName && (
           <MusicPlayer
             currentVideo={nowPlaying}
