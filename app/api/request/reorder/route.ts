@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { broadcast } from "@/lib/queueEvents";
+import pusher from "@/lib/pusher";
 
 export async function POST(req: Request) {
   const { roomCode, order }: { roomCode: string; order: string[] } =
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
         where: { roomId: room.id },
         orderBy: { order: "asc" },
       });
-      broadcast(roomCode, { queue });
+      await pusher.trigger(`room-${roomCode}`, "queue-update", { queue });
     }
 
     return NextResponse.json({ success: true });

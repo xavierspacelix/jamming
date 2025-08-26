@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { MusicPlayer } from "@/components/music-player";
 import { SongQueue } from "@/components/song-queue";
 import { Button } from "@/components/ui/button";
-import { getCookie } from "@/lib/cookies-client";
+import Pusher from "pusher-js";
 type RequestRow = {
   id: string;
   videoId: string;
@@ -41,37 +41,20 @@ export default function RoomPage({
     }
   };
   useEffect(() => {
-    let es: EventSource | null = null;
-    let retryDelay = 1000;
-    const maxDelay = 16000;
-    let retryTimer: ReturnType<typeof setTimeout>;
-
-    const connect = () => {
-      es = new EventSource(`/api/socket?room=${code}`);
-      es.onopen = () => {
-        retryDelay = 1000;
-        loadQueue();
-      };
-      es.onmessage = (e) => {
-        try {
-          const data = JSON.parse(e.data);
-          if (data.queue) setQueue(data.queue);
-        } catch (err) {
-          console.error(err);
-        }
-      };
-      es.onerror = () => {
-        es?.close();
-        retryTimer = setTimeout(connect, retryDelay);
-        retryDelay = Math.min(retryDelay * 2, maxDelay);
-      };
-    };
     loadQueue();
-    connect();
-
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY || "", {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
+    });
+    const channel = pusher.subscribe(`room-${code}`);
+    const handler = (data: { queue: RequestRow[] }) => {
+      setQueue(data.queue);
+      setNowPlaying(data.queue[0] ?? null);
+    };
+    channel.bind("queue-update", handler);
     return () => {
-      es?.close();
-      if (retryTimer) clearTimeout(retryTimer);
+      channel.unbind("queue-update", handler);
+      pusher.unsubscribe(`room-${code}`);
+      pusher.disconnect();
     };
   }, [loadQueue, code]);
   return (
