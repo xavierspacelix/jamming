@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { broadcast } from "@/lib/queueEvents";
+import pusher from "@/lib/pusher";
 
 // GET /api/request?room=CODE
 export async function GET(req: Request) {
@@ -64,7 +64,7 @@ export async function GET(req: Request) {
 //       where: { roomId: room.id },
 //       orderBy: { order: "asc" },
 //     });
-//     broadcast(roomCode, { queue });
+//     pusher.trigger(`room-${roomCode}`, "queue-update", { queue });
 
 //     return NextResponse.json(created);
 //   } catch (e) {
@@ -128,9 +128,7 @@ export async function POST(req: NextRequest) {
       orderBy: { order: "asc" },
     });
     try {
-      // gunakan roomCode dari body—tidak perlu menyentuh object room lagi
-      // @ts-ignore – sesuaikan dengan util broadcast milikmu
-      broadcast(roomCode, { queue });
+      await pusher.trigger(`room-${roomCode}`, "queue-update", { queue });
     } catch {}
 
     return NextResponse.json(created, { status: 201 });

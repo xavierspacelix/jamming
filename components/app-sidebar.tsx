@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import { SidebarOptInForm } from "./sidebar-opt-in-form";
 import { Label } from "@radix-ui/react-label";
-import { Search } from "lucide-react";
+import { AudioWaveform, Search } from "lucide-react";
 import { useParams } from "next/navigation";
 import { getCookie } from "@/lib/cookies-client";
 
@@ -127,8 +127,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
               <a href="#">
-                {/* <IconInnerShadowTop className="!size-5" /> */}
-                <span className="text-base font-semibold">Acme Inc.</span>
+                <AudioWaveform className="!size-5" />
+                <span className="text-base font-semibold">Jamming Space.</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

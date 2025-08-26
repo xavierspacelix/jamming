@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import YouTube, { YouTubeProps } from "react-youtube";
 import { Play, Pause, SkipForward, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Pusher from "pusher-js";
 
 interface RequestItem {
   id: string;
@@ -43,19 +44,20 @@ export default function Player({
 
   useEffect(() => {
     loadQueue();
-    const es = new EventSource(`/api/socket?room=${code}`);
-    es.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        if (data.queue) {
-          setCurrent(data.queue[0] || null);
-          setIsPaused(false);
-        }
-      } catch (err) {
-        console.error(err);
-      }
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY || "", {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "",
+    });
+    const channel = pusher.subscribe(`room-${code}`);
+    const handler = (data: { queue: RequestItem[] }) => {
+      setCurrent(data.queue[0] || null);
+      setIsPaused(false);
     };
-    return () => es.close();
+    channel.bind("queue-update", handler);
+    return () => {
+      channel.unbind("queue-update", handler);
+      pusher.unsubscribe(`room-${code}`);
+      pusher.disconnect();
+    };
   }, [code]);
 
   const onEnd = async () => {
@@ -63,6 +65,7 @@ export default function Player({
 
     try {
       await fetch(`/api/request/${current.id}`, { method: "DELETE" });
+      window.location.reload();
     } catch (err) {
       console.error("Failed to delete:", err);
     }
